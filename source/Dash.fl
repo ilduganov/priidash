@@ -1,0 +1,760 @@
+# data file for the Fltk User Interface Designer (fluid)
+version 1.0110 
+header_name {.h} 
+code_name {.cxx}
+comment {
+/**********************************************************************************************
+    This file is part of PriiDash(TM), an enhanced instrument panel and
+    data logger for the Prius and more. 
+    Copyright (C) 2011 by TeamPrii at sourceforge.net
+
+    PriiDash(TM) is provided "AS IS" under the terms of 
+    the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version, WITH ADDITIONAL TERMS in 
+    paragraphs below.
+
+    This program is distributed in the hope that it will be useful,
+    but Without Any Warranty; without even the implied warranty of
+    Merchantability or Fitness For A Particular Purpose.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+    ADDITIONAL TERMS
+    
+    IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR ANY
+    DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+    (INCLUDING, BUT NOT LIMITED TO, DEATH; INJURY; COLLISION AND/OR DAMAGE TO VEHICLES;
+    LIABILITY FOR ACCIDENTS AND/OR TRAFFIC VIOLATIONS; PROCUREMENT OF SUBSTITUTE GOODS OR
+    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+    ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE OR
+    INABILITY TO USE THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+    THE AUTHOR RESERVES ALL RIGHTS OF OWNERSHIP OF THE NAME OF THE SOFTWARE, PriiDash(TM).
+    ALL MODIFIED VERSIONS MUST BE CLEARLY MARKED AS BEING DIFFERENT FROM THE ORIGINAL,
+    AND MUST CARRY ACKNOWLEDGEMENT TO THE ORIGINAL AUTHOR, TeamPrii at sourceforge.net. 
+    ALL ADVERTISING MATERIALS MENTIONING FEATURES OR USE OF THIS SOFTWARE
+    MUST DISPLAY THE FOLLOWING ACKNOWLEDGEMENT:
+    This product includes the software PriiDash(TM) developed by 
+    TeamPrii at sourceforge.net.
+    
+    To contact the author: look up TeamPrii at sourceforge.net.
+    Project home page: http://priidash.sourceforge.net/
+************************************************************************************************/
+
+} {in_source in_header
+} 
+
+decl {\#include "OS.h"} {} 
+
+decl {\#include <stdio.h>} {} 
+
+decl {\#include <FL/Fl_File_Chooser.H>} {} 
+
+decl {\#include <boost/thread/thread.hpp>} {} 
+
+decl {\#include "UI.h"} {} 
+
+decl {\#include "Util.h"} {} 
+
+decl {\#include "LogToCSV.h"} {} 
+
+decl {bool QuitProgram; //Signal Quit button press -> runUI() to stop looping} {public
+} 
+
+decl {bool QuitShowLic; //Signal Accept button press -> showLic() to stop looping} {public
+} 
+
+decl {boost::thread workerThread; //thread for runUI()} {} 
+
+Function {set_log_filename_CB()} {open private
+} {
+  code {Fl_File_Chooser f(log_filename->value(),"*.txt",Fl_File_Chooser::CREATE,"Set log filename");
+f.preview(0);
+f.show();
+while(f.shown()){Fl::check();}
+if (f.count()>0){log_filename->value(f.value());};} {}
+} 
+
+Function {set_csv_filename_CB()} {open private
+} {
+  code {Fl_File_Chooser f(csv_filename->value(),"*.csv\\t*.txt",Fl_File_Chooser::CREATE,"Set csv filename");
+f.preview(0);
+f.show();
+while(f.shown()){Fl::check();}
+if (f.count()>0){csv_filename->value(f.value());};} {}
+} 
+
+Function {convert_log_csv_CB()} {open private
+} {
+  code {//boost::thread thrlogtocsv;
+//	printf("logtocsv() thread starting ... ");fflush(stdout);
+//	thrlogtocsv=boost::thread(logtocsv, log_filename->value(), csv_filename->value());
+//	printf("logtocsv() thread started\\n");fflush(stdout);
+logtocsv(log_filename->value(), csv_filename->value());} {}
+} 
+
+Function {go_button_CB(Fl_Widget*, void* userdata)} {open private
+} {
+  code {printf("%s > Go button pressed\\n",(const char*)userdata);fflush(stdout);
+switch (UIstate){
+	case Stopped:{
+		UIstate = Running;
+		setUIstate(UIstate);
+		break;
+	}
+	case Running:{
+		UIstate = Stopped;
+		setUIstate(UIstate);
+		break;
+	}	
+}} {}
+} 
+
+Function {main_window_CB()} {open private
+} {
+  code {printf("main_window quit button pressed\\n");fflush(stdout);
+QuitProgram=true;
+printf("waiting for runUI() thread to end\\n");fflush(stdout);
+workerThread.join();
+printf("thread ended. Exitting...\\n");fflush(stdout);
+//Fl::flush();    
+//Fl::unlock();
+exit(0);} {}
+} 
+
+decl {\#include "icon.h"} {} 
+
+Function {} {open
+} {
+  code {printf("**********************************************************************\\n"
+"    PriiDash(TM)  Copyright (C) 2011 by TeamPrii at sourceforge.net\\n"
+"    This program is licensed under the GNU General Public License,\\n"
+"    with ADDITIONAL TERMS. For details click\\n" 
+"    \\"About PriiDash(TM) ...\\" button in \\"Main Control\\" window.\\n"
+"**********************************************************************\\n");
+fflush(stdout);} {}
+  Fl_Window main_window {
+    label {Main Control - PriiDash(TM)}
+    callback main_window_CB
+    xywh {-32000 -32000 723 223} type Double color 38 hide
+  } {
+    Fl_Group run_group {open
+      xywh {605 39 114 156} box ROUNDED_BOX color 32
+    } {
+      Fl_Button go_button {
+        label Go
+        user_data {"Main Control"}
+        callback go_button_CB
+        xywh {616 43 93 94} type Toggle box ROUND_UP_BOX down_box ROUND_UP_BOX color 61 selection_color 73 labelfont 1 labelsize 24
+      }
+      Fl_Choice run_type_choice {
+        label {run type} open
+        xywh {611 164 101 19} box UP_BOX down_box BORDER_BOX color 37 labelfont 1 labelcolor 26 align 1
+      } {
+        MenuItem run_type_normal {
+          label Normal
+          callback {UIruntype=Normal;}
+          xywh {0 0 36 21}
+        }
+        MenuItem run_type_simulation {
+          label Simulation
+          callback {UIruntype=Simulation;}
+          xywh {0 0 36 21}
+        }
+      }
+    }
+    Fl_Group settings_group {open
+      xywh {5 51 593 134} box ROUNDED_BOX color 32
+    } {
+      Fl_Output OBDUSB_portname {
+        xywh {162 61 160 25} color 84 labelcolor 94
+        code0 {o->value("/dev/ttyS6");//"/dev/ttyUSB0");}
+      }
+      Fl_Button set_OBDUSB_portname {
+        label {Set OBDUSB port}
+        callback {Fl_File_Chooser f("/dev/","ttyU*",Fl_File_Chooser::SINGLE,"Set OBDUSB port");
+f.preview(0);
+f.show();
+while(f.shown()){Fl::check();}
+if (f.count()>0){OBDUSB_portname->value(f.value());}}
+        xywh {10 55 150 37} box ROUND_UP_BOX color 72 labelfont 1 labelcolor 3 align 16
+      }
+      Fl_Output log_filename {
+        xywh {164 103 420 25} color 140
+      }
+      Fl_Button set_log_filename {
+        label {Set log filename}
+        callback set_log_filename_CB
+        xywh {10 98 150 37} box ROUND_UP_BOX color 15 labelfont 1 labelcolor 6 align 16
+      }
+      Fl_Output csv_filename {
+        xywh {164 144 420 25} color 101
+        code0 {//o->value("/media/Home/OBDlog/test.csv");}
+      }
+      Fl_Button set_csv_filename {
+        label {Set csv filename}
+        callback set_csv_filename_CB
+        xywh {10 138 150 37} box ROUND_UP_BOX color 57 labelfont 1 labelcolor 119 align 16
+      }
+      Fl_Button convert_log_csv {
+        label {Convert log->csv}
+        callback convert_log_csv_CB
+        xywh {429 61 150 37} box ROUND_UP_BOX color 57 labelfont 1 labelcolor 119 align 16
+      }
+    }
+    Fl_Button about_button {
+      label {About PriiDash(TM) ...}
+      callback {//QuitShowLic=false;
+//boost::thread thr1;
+//thr1=boost::thread(showLic);
+
+if (!about_window) {make_about_window();}
+//about_window->fullscreen();
+about_window->show();
+Fl::flush();}
+      xywh {25 8 235 39} labelfont 1 labelsize 18
+    }
+  }
+  code {init_filenames();
+UIstate = Stopped;
+
+Fl::lock();
+
+seticonfixed(main_window);
+
+QuitProgram=false;
+printf("runUI() thread starting ... ");fflush(stdout);
+//boost::thread workerThread(runUI);
+workerThread = boost::thread(runUI);
+printf("runUI() thread started\\n");fflush(stdout);
+
+//if (!about_window) {make_about_window();}
+//about_window->fullscreen();
+//about_window->show();
+//while (!QuitShowLic){wait(0.5);}
+
+FILE *fp;
+fp = fopen("LicRead.txt","r"); //
+if (fp==NULL) {
+	QuitShowLic=false;
+	boost::thread thr1;
+	printf("showLic() thread starting ... ");fflush(stdout);
+	thr1=boost::thread(showLic);
+	printf("showLic() thread started\\n");fflush(stdout);
+}
+fclose(fp);} {}
+} 
+
+decl {\#include "Fl_Gauge.H"} {public global
+} 
+
+class Gauges {open
+} {
+  Function {Gauges()} {open
+  } {
+    Fl_Window gauges_window {
+      label {Gauges - PriiDash(TM)} open
+      xywh {28 28 895 576} type Double color 32
+      code0 {o->cursor(FL_CURSOR_DEFAULT,FL_YELLOW,FL_RED);}
+      code1 {Fl::flush();} visible
+    } {
+      Fl_Box iceT_G {
+        label {ICE T(F)}
+        xywh {2 2 208 208} box ROUNDED_BOX color 34 labelfont 1 labelsize 18 labelcolor 252 align 17
+        code0 {o->type(FL_GAUGE_ROUND);o->valuedisplaydelta(0.1);}
+        code1 {o->greenzonecolorG(FL_GREEN);o->greenzonecolorR(FL_RED);o->dialcolorR(FL_RED);o->redlinecolorR(FL_YELLOW);}
+        code2 {o->max(205);o->min(100);o->step(10);o->stepdiv(5);o->redlinestart(195);o->greenzoneend(157);o->greenzonestart(104);}
+        code3 {o->pointercolor(o->labelcolor());o->pointercolor0(o->labelcolor());o->pointercolorG(o->labelcolor());o->pointercolorR(FL_BLUE);}
+        class Fl_Gauge
+      }
+      Fl_Box wT_G {
+        label {wT(F)}
+        xywh {1 263 210 52} box ROUNDED_BOX color 34 labelfont 1 labelcolor 133 align 22
+        class Fl_Gauge
+      }
+      Fl_Box speed_G {
+        label MPH
+        xywh {305 2 170 121} box ROUNDED_BOX color 34 labelfont 2 labelsize 16 labelcolor 199 align 26
+        code0 {o->type(FL_GAUGE_SPEED);o->valuedisplaydelta(0.1);}
+        code1 {o->valuefontsize(120);}
+        code2 {o->redlinestart(41);o->greenzoneend(40.99);o->greenzonestart(34);}
+        class Fl_Gauge
+      }
+      Fl_Box amp_G {
+        label A
+        xywh {210 123 265 110} box ROUNDED_BOX color 34 labelfont 1 labelsize 20 labelcolor 218 align 18
+        code0 {o->valuedisplaydelta(0.15);}
+        class Fl_Gauge
+      }
+      Fl_Box soc_G {
+        label {SOC(%)}
+        xywh {211 233 145 76} box ROUNDED_BOX color 34 labelfont 1 labelcolor 218 align 22
+        code0 {o->valuedisplaydelta(0.2);}
+        class Fl_Gauge
+      }
+      Fl_Box rpm_G {
+        label RPM
+        xywh {475 -1 208 208} box ROUNDED_BOX color 34 labelfont 1 labelsize 18 labelcolor 133 align 17
+        code0 {o->type(FL_GAUGE_ROUND);o->framecolor(fl_lighter(o->labelcolor()));}
+        code1 {o->greenzonecolorG(FL_WHITE);o->dialcolorG(FL_DARK_GREEN);o->greenzonecolorR(FL_RED);o->dialcolorR(FL_DARK_CYAN);}
+        code2 {o->pointercolor(FL_BLACK);o->pointercolor0(FL_BLACK);o->pointercolorG(FL_BLACK);o->pointercolorR(FL_YELLOW);}
+        code3 {o->valuedisplaydelta(16);}
+        class Fl_Gauge
+      }
+      Fl_Box ign_G {
+        label IGN
+        xywh {520 442 160 45} box ROUNDED_BOX color 34 labelfont 1 labelcolor 133 align 20
+        code0 {o->greenzonecolorG(FL_GREEN);o->pointercolor(FL_WHITE);o->pointercolor0(FL_WHITE);}
+        code1 {o->valuefontsize(36);}
+        class Fl_Gauge
+      }
+      Fl_Box hvV_G {
+        label {HV(V)}
+        xywh {370 283 105 38} box ROUNDED_BOX color 34 labelfont 1 labelsize 12 labelcolor 61 align 17
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=3; int DecPlace=0;o->valueplaces(RealPlace,DecPlace);o->valuedisplaydelta(2);}
+        class Fl_Gauge
+      }
+      Fl_Box auxV_G {
+        label 12V
+        xywh {575 487 90 45} box ROUNDED_BOX color 34 labelfont 1 labelsize 12 labelcolor 61 align 17
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);o->valuefontsize(24);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);o->pointercolor(fl_lighter(o->labelcolor()));}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=5; int DecPlace=2; o->valueplaces(RealPlace,DecPlace);}
+        class Fl_Gauge
+      }
+      Fl_Box dsc_G {
+        label {dsc(%)}
+        xywh {340 529 75 46} box ROUNDED_BOX color 34 labelfont 1 labelsize 12 labelcolor 218 align 17
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=3; int DecPlace=1;o->valueplaces(RealPlace,DecPlace);}
+        class Fl_Gauge
+      }
+      Fl_Box oaT_G {
+        label {OAT(F)}
+        xywh {805 -1 90 66} box ROUNDED_BOX color 34 labelfont 1 labelsize 12 labelcolor 52 align 22
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);o->valuefontsize(28);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=4; int DecPlace=1;o->valueplaces(RealPlace,DecPlace);}
+        class Fl_Gauge
+      }
+      Fl_Box intakeT_G {
+        label {intake T(F)}
+        xywh {800 65 95 56} box ROUNDED_BOX color 34 labelfont 1 labelsize 12 labelcolor 133 align 22
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);o->valuefontsize(24);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=3; int DecPlace=1;o->valueplaces(RealPlace,DecPlace);}
+        class Fl_Gauge
+      }
+      Fl_Box atm_G {
+        label {atm(kPa)}
+        xywh {810 121 85 58} box ROUNDED_BOX color 34 labelfont 1 labelsize 12 labelcolor 52 align 18
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);o->valuefontsize(24);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=1; int DecPlace=0;o->valueplaces(RealPlace,DecPlace);}
+        class Fl_Gauge
+      }
+      Fl_Box inv1T_G {
+        label {Inv1 T(C)}
+        xywh {3 320 48 220} box ROUNDED_BOX color 34 labelfont 1 labelcolor 181 align 130
+        code0 {o->type(FL_GAUGE_VERTICAL);}
+        code1 {o->redlinestart(55);}
+        class Fl_Gauge
+      }
+      Fl_Box inv2T_G {
+        label {Inv2 T(C)}
+        xywh {51 320 48 220} box ROUNDED_BOX color 34 labelfont 1 labelcolor 126 align 130
+        code0 {o->type(FL_GAUGE_VERTICAL);}
+        code1 {o->redlinestart(55);}
+        class Fl_Gauge
+      }
+      Fl_Box mg1T_G {
+        label {mg1 T(C)}
+        xywh {147 320 48 220} box ROUNDED_BOX color 34 labelfont 1 labelcolor 181 align 130
+        code0 {o->type(FL_GAUGE_VERTICAL);}
+        code1 {o->redlinestart(55);}
+        class Fl_Gauge
+      }
+      Fl_Box mg2T_G {
+        label {mg2 T(C)}
+        xywh {195 320 48 220} box ROUNDED_BOX color 34 labelfont 1 labelcolor 126 align 130
+        code0 {o->type(FL_GAUGE_VERTICAL);}
+        code1 {o->redlinestart(55);}
+        class Fl_Gauge
+      }
+      Fl_Box cnvT_G {
+        label {Cnvt T(C)}
+        xywh {99 320 48 220} box ROUNDED_BOX color 34 labelfont 1 labelcolor 158 align 130
+        code0 {o->type(FL_GAUGE_VERTICAL);}
+        code1 {o->redlinestart(55);}
+        class Fl_Gauge
+      }
+      Fl_Box blC_G {
+        label blC
+        xywh {243 320 48 220} box ROUNDED_BOX color 34 labelfont 1 labelcolor 218 align 130
+        code0 {o->type(FL_GAUGE_VERTICAL);}
+        code1 {o->redlinestart(40);}
+        class Fl_Gauge
+      }
+      Fl_Box buC_G {
+        label buC
+        xywh {291 320 48 220} box ROUNDED_BOX color 34 labelfont 1 labelcolor 218 align 130
+        code0 {o->type(FL_GAUGE_VERTICAL);}
+        code1 {o->redlinestart(40);}
+        class Fl_Gauge
+      }
+      Fl_Box catT1_G {
+        label {cat1 T(C)}
+        xywh {210 1 95 64} box ROUNDED_BOX color 34 labelfont 1 labelsize 12 labelcolor 90 align 22
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);o->valuefontsize(32);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=3; int DecPlace=0;o->valueplaces(RealPlace,DecPlace);}
+        class Fl_Gauge
+      }
+      Fl_Box catT2_G {
+        label {cat2 T(C)}
+        xywh {210 64 95 59} box ROUNDED_BOX color 34 labelfont 1 labelsize 12 labelcolor 90 align 22
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);o->valuefontsize(32);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=3; int DecPlace=0;o->valueplaces(RealPlace,DecPlace);}
+        class Fl_Gauge
+      }
+      Fl_Box rpm2_G {
+        label RPM2
+        xywh {690 536 110 37} box ROUNDED_BOX color 34 labelfont 1 labelsize 12 labelcolor 90 align 17
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));o->valuefontsize(24);}
+        code3 {int RealPlace=4; int DecPlace=0; o->valueplaces(RealPlace,DecPlace);o->valuedisplaydelta(16);}
+        class Fl_Gauge
+      }
+      Fl_Box mg1rpm_G {
+        label {MG1 RPM}
+        xywh {690 461 110 37} box ROUNDED_BOX color 34 labelfont 1 labelsize 12 labelcolor 181 align 17
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));o->valuefontsize(24);}
+        code3 {int RealPlace=5; int DecPlace=0; o->valueplaces(RealPlace,DecPlace);}
+        class Fl_Gauge
+      }
+      Fl_Box mg2rpm_G {
+        label {MG2 RPM}
+        xywh {690 498 110 37} box ROUNDED_BOX color 34 labelfont 1 labelsize 12 labelcolor 126 align 17
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));o->valuefontsize(24);}
+        code3 {int RealPlace=5; int DecPlace=0; o->valueplaces(RealPlace,DecPlace);}
+        class Fl_Gauge
+      }
+      Fl_Output clock_G {
+        xywh {695 180 200 35} color 32 labelcolor 25 align 0 textfont 1 textsize 16 textcolor 149
+        code0 {char str[20];}
+        code1 {getdatetimeclockstr(str);}
+        code2 {o->value(str);}
+      }
+      Fl_Box psd_G {
+        label PSD
+        xywh {695 314 200 147} box ROUNDED_BOX color 34 labelfont 1 labelsize 18 labelcolor 195 align 17
+        code0 {o->min(-6500);o->max(6500);o->type(FL_GAUGE_PSD);o->v2mode(FL_GAUGE_V2_ON);}
+        code1 {o->valuefontsize(14);o->framecolor(fl_darker(o->labelcolor()));o->pointercolorall(o->framecolor());}
+        code2 {int rp=5,dp=0; o->valueplaces(rp,dp);}
+        code3 {o->textcolor(fl_lighter(o->labelcolor()));o->textcolor0(o->textcolor());o->redlinestart(2000);o->greenzoneend(1800);o->greenzonestart(900);}
+        class Fl_Gauge
+      }
+      Fl_Button go_button {
+        label Go
+        user_data {"Gauges"}
+        callback go_button_CB selected
+        xywh {800 481 93 94} type Toggle box ROUND_UP_BOX down_box ROUND_UP_BOX color 61 selection_color 73 labelfont 1 labelsize 24 labelcolor 51
+      }
+      Fl_Box mpg_G {
+        label MPG
+        xywh {683 70 112 56} box ROUNDED_BOX color 34 labelfont 1 labelsize 12 labelcolor 175 align 18
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);o->valuefontsize(24);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=4; int DecPlace=1;o->valueplaces(RealPlace,DecPlace);o->fontface(o->labelfont());}
+        class Fl_Gauge
+      }
+      Fl_Box dtcdist_G {
+        label {DTC dist}
+        xywh {515 531 158 44} box ROUNDED_BOX color 34 labelfont 1 labelsize 10 labelcolor 199 align 26
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);o->valuefontsize(18);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=4; int DecPlace=1;o->valueplaces(RealPlace,DecPlace);}
+        class Fl_Gauge
+      }
+      Fl_Box wT2_G {
+        label {wT2(F)}
+        xywh {0 211 210 52} box ROUNDED_BOX color 34 labelfont 1 labelcolor 250 align 22
+        class Fl_Gauge
+      }
+      Fl_Box odo_G {
+        label ODO
+        xywh {695 267 200 48} box ROUNDED_BOX color 34 labelfont 1 labelsize 10 labelcolor 199 align 26
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);o->valuefontsize(28);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=4; int DecPlace=2;o->valueplaces(RealPlace,DecPlace);}
+        class Fl_Gauge
+      }
+      Fl_Box timeDelta_G {
+        label {time delta (s)}
+        xywh {345 486 218 44} box ROUNDED_BOX color 34 labelfont 1 labelsize 10 labelcolor 199 align 26
+        code0 {o->type(FL_GAUGE_SQUARE_CLOCK);o->greenzonemode(FL_GAUGE_GZ_OFF);o->valuefontsize(28);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=6; int DecPlace=1;o->valueplaces(RealPlace,DecPlace);}
+        class Fl_Gauge
+      }
+      Fl_Box mpgmean_G {
+        label {avg MPG}
+        xywh {682 0 125 70} box ROUNDED_BOX color 34 labelfont 1 labelsize 12 labelcolor 175 align 18
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);o->valuefontsize(36);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);o->pointercolor(fl_lighter(o->labelcolor()));}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=4; int DecPlace=1;o->valueplaces(RealPlace,DecPlace);o->fontface(o->labelfont());}
+        class Fl_Gauge
+      }
+      Fl_Box fuel_G {
+        label {fuel(gal)}
+        xywh {695 215 200 55} box ROUNDED_BOX color 34 labelfont 1 labelsize 10 labelcolor 190 align 22
+        code0 {o->type(FL_GAUGE_LINEAR);o->max(11);o->min(0);o->step(1);o->stepdiv(0.5);o->valuefontsize(24);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);o->greenzonestart(0);o->greenzoneend(2.7);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));o->dialcolorG(FL_RED);o->textcolorG(FL_YELLOW);o->pointercolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=3; int DecPlace=1;o->valueplaces(RealPlace,DecPlace);o->pointercolor0(fl_darker(o->labelcolor()));}
+        class Fl_Gauge
+      }
+      Fl_Box load_G {
+        label {LOAD(%)}
+        xywh {536 397 160 45} box ROUNDED_BOX color 34 labelfont 1 labelsize 10 labelcolor 173 align 22
+        code0 {o->type(FL_GAUGE_LINEAR);o->valuefontsize(28);o->min(75);o->max(90);o->step(5);o->stepdiv(1);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);o->pointercolor(fl_darker(o->labelcolor()));o->pointercolor0(fl_darker(o->labelcolor()));}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));o->greenzonestart(80);o->greenzoneend(99.99);}
+        code3 {int RealPlace=4; int DecPlace=1;o->valueplaces(RealPlace,DecPlace);o->valuedisplaydelta(0.2);}
+        class Fl_Gauge
+      }
+      Fl_Box acc_G {
+        label acc
+        xywh {340 322 110 110} box ROUNDED_BOX color 34 labelsize 12 labelcolor 133 align 17
+        code0 {o->type(FL_GAUGE_XY);o->min(-50);o->max(50);o->step(20);o->stepdiv(10);}
+        code1 {int RealPlace=2; int DecPlace=0;o->valueplaces(RealPlace,DecPlace);}
+        code2 {o->valuedisplaydelta(3);}
+        class Fl_Gauge
+      }
+      Fl_Box aLR_G {
+        label aLR
+        xywh {340 432 79 41} box ROUNDED_BOX color 34 labelsize 12 labelcolor 93 align 17
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=2; int DecPlace=0; o->valueplaces(RealPlace,DecPlace);o->valuedisplaydelta(3);}
+        class Fl_Gauge
+      }
+      Fl_Output shift_G {
+        xywh {485 365 30 30} color 0 labelcolor 25 align 16 textfont 1 textsize 32 textcolor 149
+        code0 {o->value("?");}
+      }
+      Fl_Output light_G {
+        xywh {480 335 30 30} box ROUND_DOWN_BOX color 0 labelcolor 25 align 16 textfont 1 textsize 32 textcolor 85
+        code0 {o->value("?");}
+      }
+      Fl_Output door_G {
+        xywh {485 300 30 30} color 0 labelcolor 25 align 16 textfont 1 textsize 32 textcolor 121
+        code0 {o->value("?");}
+      }
+      Fl_Box trip_G {
+        label Trip
+        xywh {682 126 130 53} box ROUNDED_BOX color 34 labelfont 2 labelsize 10 labelcolor 247 align 26
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);o->valuefontsize(36);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);o->pointercolor(fl_lighter(o->labelcolor()));}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=4; int DecPlace=2;o->valueplaces(RealPlace,DecPlace);o->fontface(o->labelfont());}
+        class Fl_Gauge
+      }
+      Fl_Box kW_G {
+        label kW
+        xywh {520 299 160 50} box ROUNDED_BOX color 34 labelfont 1 labelsize 10 labelcolor 173 align 24
+        code0 {o->type(FL_GAUGE_LINEAR);o->valuefontsize(36);o->min(-5);o->max(20);o->step(5);o->stepdiv(1);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);o->pointercolor(fl_darker(o->labelcolor()));o->pointercolor0(fl_darker(o->labelcolor()));}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));o->greenzonestart(14);o->greenzoneend(19.9);o->pointercolorG(FL_GREEN);}
+        code3 {int RealPlace=4; int DecPlace=1;o->valueplaces(RealPlace,DecPlace);o->valuedisplaydelta(0.2);}
+        class Fl_Gauge
+      }
+      Fl_Box eff_G {
+        label {eff(%)}
+        xywh {520 206 160 50} box ROUNDED_BOX color 34 labelfont 1 labelsize 10 labelcolor 173 align 20
+        code0 {o->type(FL_GAUGE_LINEAR);o->valuefontsize(36);o->min(25);o->max(35);o->step(5);o->stepdiv(1);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);o->pointercolor(fl_darker(o->labelcolor()));o->pointercolor0(fl_darker(o->labelcolor()));}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));o->greenzonestart(30.7);o->greenzoneend(34.9);o->pointercolorG(FL_GREEN);}
+        code3 {int RealPlace=4; int DecPlace=1;o->valueplaces(RealPlace,DecPlace);o->valuedisplaydelta(0.2);}
+        class Fl_Gauge
+      }
+      Fl_Box eff2_G {
+        label {eff2(%)}
+        xywh {530 255 160 45} box ROUNDED_BOX color 34 labelfont 1 labelsize 10 labelcolor 173 align 20
+        code0 {o->type(FL_GAUGE_LINEAR);o->valuefontsize(28);o->min(25);o->max(45);o->step(5);o->stepdiv(1);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);o->pointercolor(fl_darker(o->labelcolor()));o->pointercolor0(fl_darker(o->labelcolor()));}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));o->greenzonestart(35);o->greenzoneend(44.9);}
+        code3 {int RealPlace=4; int DecPlace=1;o->valueplaces(RealPlace,DecPlace);o->valuedisplaydelta(0.2);}
+        class Fl_Gauge
+      }
+      Fl_Box kW2_G {
+        label kW2
+        xywh {530 348 160 50} box ROUNDED_BOX color 34 labelfont 1 labelsize 10 labelcolor 173 align 24
+        code0 {o->type(FL_GAUGE_SQRT);o->valuefontsize(28);o->min(-20);o->max(20);o->step(5);o->stepdiv(1);}
+        code1 {o->pointercolor(fl_darker(o->labelcolor()));o->pointercolor0(fl_darker(o->labelcolor()));o->pointercolorR(FL_YELLOW);o->pointercolorG(FL_CYAN);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));o->greenzonestart(-20);o->greenzoneend(-1);o->redlinestart(15);}
+        code3 {int RealPlace=4; int DecPlace=1;o->valueplaces(RealPlace,DecPlace);o->valuedisplaydelta(0.2);}
+        class Fl_Gauge
+      }
+      Fl_Box gal_G {
+        label gal
+        xywh {415 529 97 46} box ROUNDED_BOX color 34 labelfont 1 labelsize 12 labelcolor 175 align 18
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);o->valuefontsize(24);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=5; int DecPlace=3;o->valueplaces(RealPlace,DecPlace);o->fontface(o->labelfont());}
+        class Fl_Gauge
+      }
+      Fl_Box dhvBV_G {
+        label {dhvBV(%)}
+        xywh {360 232 85 51} box ROUNDED_BOX color 34 labelfont 1 labelsize 12 labelcolor 218 align 17
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=3; int DecPlace=1;o->valueplaces(RealPlace,DecPlace);}
+        class Fl_Gauge
+      }
+      Fl_Box hvFanV_G {
+        label hvFanV
+        xywh {425 440 90 45} box ROUNDED_BOX color 34 labelfont 1 labelsize 12 labelcolor 61 align 17
+        code0 {o->greenzonemode(FL_GAUGE_GZ_OFF);o->valuefontsize(24);}
+        code1 {o->redlinemode(FL_GAUGE_RL_OFF);o->pointercolor(fl_lighter(o->labelcolor()));}
+        code2 {o->framecolor(fl_darker(o->labelcolor()));}
+        code3 {int RealPlace=5; int DecPlace=2; o->valueplaces(RealPlace,DecPlace);}
+        class Fl_Gauge
+      }
+    }
+    code {int RealPlace=5;int DecPlace=1;iceT_G->valueplaces(RealPlace,DecPlace); iceT_G->v2mode(FL_GAUGE_V2_ON);
+iceT_G->framecolor(fl_darker(iceT_G->labelcolor()));
+iceT_G->v2color(wT_G->labelcolor()); // since we draw wT here as value 2
+iceT_G->valuefontsize(48);
+
+wT_G->max(205);wT_G->min(110);//wT_G->step(10);wT_G->stepdiv(5);
+wT_G->type(FL_GAUGE_SQUARE);//_DIGITAL);
+wT_G->redlinestart(190);wT_G->greenzoneend(157);wT_G->greenzonestart(30);
+RealPlace=5; DecPlace=1;wT_G->valueplaces(RealPlace,DecPlace); 
+wT_G->pointercolor(wT_G->labelcolor());wT_G->pointercolor0(wT_G->labelcolor());
+wT_G->pointercolorG(FL_GREEN);wT_G->pointercolorR(FL_RED);
+wT_G->valuefontsize(42);
+wT_G->framecolor(fl_darker(wT_G->labelcolor()));
+
+wT2_G->max(205);wT2_G->min(110);//wT2_G->step(10);wT2_G->stepdiv(5);
+wT2_G->type(FL_GAUGE_SQUARE);//_DIGITAL);
+wT2_G->redlinestart(190);wT2_G->greenzoneend(157);wT2_G->greenzonestart(30);
+RealPlace=5; DecPlace=1;wT2_G->valueplaces(RealPlace,DecPlace); 
+wT2_G->pointercolor(wT2_G->labelcolor());wT2_G->pointercolor0(wT2_G->labelcolor());
+wT2_G->pointercolorG(FL_GREEN);wT2_G->pointercolorR(FL_RED);
+wT2_G->valuefontsize(42);
+wT2_G->framecolor(fl_darker(wT2_G->labelcolor()));} {}
+    code {speed_G->max(200);speed_G->min(0);//speed_G->step(200);speed_G->stepdiv(100);
+
+RealPlace=2; DecPlace=0;speed_G->valueplaces(RealPlace,DecPlace); 
+speed_G->pointercolor(speed_G->labelcolor());speed_G->pointercolor0(speed_G->labelcolor());
+speed_G->pointercolorG(FL_GREEN);speed_G->pointercolorR(FL_YELLOW);
+speed_G->fontface(speed_G->labelfont());
+speed_G->framecolor(fl_darker(speed_G->labelcolor()));
+
+amp_G->max(100);amp_G->min(-100);amp_G->step(20);amp_G->stepdiv(5);
+amp_G->type(FL_GAUGE_SQRT);//_LINEAR);//_DIGITAL);
+amp_G->greenzonestart(-100);amp_G->greenzoneend(-8);amp_G->redlinestart(8);
+RealPlace=5; DecPlace=1;amp_G->valueplaces(RealPlace,DecPlace); 
+amp_G->greenzonecolorG(my_fl_dark_blue);amp_G->redlinecolorR(FL_DARK_RED);
+amp_G->pointercolor(FL_WHITE);amp_G->pointercolor0(FL_WHITE);
+amp_G->pointercolorR(FL_YELLOW);amp_G->pointercolorG(FL_CYAN);
+amp_G->textcolor(my_fl_dark_gray);amp_G->textcolor0(my_fl_dark_gray);
+amp_G->textcolorG(my_fl_dark_gray);amp_G->textcolorR(my_fl_dark_gray);
+amp_G->valuefontsize(42);
+
+
+soc_G->max(100);soc_G->min(0);//soc_G->step(10);soc_G->stepdiv(5);
+soc_G->type(FL_GAUGE_SQUARE);//_DIGITAL);
+soc_G->redlinestart(65);soc_G->greenzoneend(50);soc_G->greenzonestart(0);
+RealPlace=4; DecPlace=1;soc_G->valueplaces(RealPlace,DecPlace); 
+//soc_G->greenzonecolor(FL_BLUE);soc_G->greenzonecolor0(FL_BLUE);
+soc_G->pointercolorG(FL_MAGENTA);soc_G->pointercolorR(FL_GREEN);
+soc_G->pointercolor(/*FL_BLUE*/my_fl_light_gray);soc_G->pointercolor0(/*FL_BLUE*/my_fl_light_gray);
+soc_G->valuefontsize(42);
+soc_G->framecolor(fl_darker(soc_G->labelcolor()));} {}
+    code {rpm_G->max(2200);rpm_G->min(800);rpm_G->step(200);rpm_G->stepdiv(100);
+
+rpm_G->redlinestart(2050);rpm_G->greenzoneend(2000);rpm_G->greenzonestart(900);
+RealPlace=4; DecPlace=0;rpm_G->valueplaces(RealPlace,DecPlace); rpm_G->v2mode(FL_GAUGE_V2_ON);
+rpm_G->scaleplaces(RealPlace,DecPlace);
+rpm_G->framecolor(fl_darker(rpm_G->labelcolor())); 
+rpm_G->v2color(rpm2_G->labelcolor()); // since we draw rpm2 here as value 2
+rpm_G->valuefontsize(48);
+
+ign_G->max(19);ign_G->min(9);//ign_G->step(10);ign_G->stepdiv(5);
+ign_G->type(FL_GAUGE_DIGITAL);//_DIGITAL);
+ign_G->redlinestart(18);ign_G->greenzoneend(15);ign_G->greenzonestart(13);
+RealPlace=4; DecPlace=1;ign_G->valueplaces(RealPlace,DecPlace); 
+ign_G->greenzonecolor(FL_BLUE);ign_G->greenzonecolor0(FL_BLUE);
+ign_G->textcolorG(FL_GREEN);} {}
+  }
+  Function {show()} {open
+  } {
+    code {gauges_window->show();} {}
+  }
+} 
+
+Function {make_about_window()} {open
+} {
+  code {Fl_Text_Buffer *buff = new Fl_Text_Buffer(); 
+buff->text(LicText);} {}
+  Fl_Window about_window {
+    label {About - PriiDash(TM)} open
+    xywh {-32000 -32000 785 508} type Double hide
+  } {
+    Fl_Scroll {} {open
+      xywh {5 0 777 450} box FLAT_BOX color 50
+    } {
+      Fl_Text_Display about_textdisplay {
+        label {License Agreement}
+        xywh {7 31 773 342} box BORDER_FRAME color 54 labelfont 9 labelsize 18 labelcolor 59
+        code1 {o->buffer(buff);}
+      }
+      Fl_Button accept_button {
+        label {Accept License}
+        callback {QuitShowLic=true;
+FILE *fp;
+fp = fopen("LicRead.txt","w"); //
+if (fp==NULL){printf("!!! Error creating \\"LicRead.txt\\"!!!");}
+	
+((Fl_Window*)((o->parent())->parent()))->hide();}
+        xywh {305 379 195 66} color 63 labelfont 9 labelsize 20
+      }
+    }
+    Fl_Output homepage_txt {
+      label {PriiDash(TM) Home Page:}
+      xywh {335 477 305 26} box FLAT_BOX color 23 labelfont 1 textfont 1
+      code0 {o->value("http://priidash.sourceforge.net/");}
+    }
+  }
+} 
